@@ -1,7 +1,7 @@
 """Daftar barang, tambah/edit barang, dan kartu stok."""
 import sqlite3
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 
 from .. import services, util
 from ..db import get_db
@@ -67,6 +67,13 @@ def _validasi(data):
     return None
 
 
+def _tambah_barang(conn, data):
+    return conn.execute(
+        "INSERT INTO barang (kode, nama, satuan, harga_jual, stok_minimum) VALUES (?, ?, ?, ?, ?)",
+        (data["kode"], data["nama"], data["satuan"], data["harga_jual"], data["stok_minimum"]),
+    ).lastrowid
+
+
 @bp.route("/baru", methods=["GET", "POST"])
 def baru():
     conn = get_db()
@@ -80,10 +87,7 @@ def baru():
             galat = "Isi harga modal per satuan untuk stok awal."
         if not galat:
             try:
-                bid = conn.execute(
-                    "INSERT INTO barang (kode, nama, satuan, harga_jual, stok_minimum) VALUES (?, ?, ?, ?, ?)",
-                    (data["kode"], data["nama"], data["satuan"], data["harga_jual"], data["stok_minimum"]),
-                ).lastrowid
+                bid = _tambah_barang(conn, data)
                 if stok_awal:
                     services.simpan_stok_awal(conn, tgl_awal, bid, stok_awal, modal_awal)
                 conn.commit()
@@ -103,6 +107,24 @@ def baru():
         baru=True,
         hari_ini=util.hari_ini(),
     )
+
+
+@bp.post("/cepat")
+def cepat():
+    """Tambah barang dari pop-up form pembelian. Balas JSON supaya form tidak perlu dimuat ulang."""
+    conn = get_db()
+    data = _data_form()
+    data["kode"] = data["kode"] or _kode_berikut(conn)
+    galat = _validasi(data)
+    if not galat:
+        try:
+            bid = _tambah_barang(conn, data)
+            conn.commit()
+            return jsonify({**data, "id": bid, "kode_berikut": _kode_berikut(conn)})
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            galat = f"Kode {data['kode']} sudah dipakai barang lain."
+    return jsonify({"galat": galat}), 400
 
 
 @bp.route("/<int:barang_id>/edit", methods=["GET", "POST"])

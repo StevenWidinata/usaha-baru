@@ -122,3 +122,37 @@ def test_pindah_dana_dan_backup(client):
     assert r.status_code == 200
     assert r.data[:15] == b"SQLite format 3"
     r.close()
+
+
+def test_barang_baru_dari_form_pembelian(client):
+    isi_data(client)
+    teks = client.get("/pembelian/baru").get_data(as_text=True)
+    assert 'id="buka-barang-baru"' in teks and 'id="dlg-barang"' in teks
+    assert 'value="BRG-003"' in teks  # kode berikutnya sudah terisi di pop-up
+
+    r = client.post("/barang/cepat", data={"kode": "", "nama": "Dispenser Baru", "satuan": "unit",
+                                           "harga_jual": "1.500.000", "stok_minimum": "2"})
+    assert r.status_code == 200
+    b = r.get_json()
+    assert b["kode"] == "BRG-003" and b["nama"] == "Dispenser Baru" and b["satuan"] == "unit"
+    assert b["harga_jual"] == 1500000 and b["kode_berikut"] == "BRG-004"
+
+    # barang baru langsung bisa dipakai di pembelian, dan muncul di dropdown form
+    client.post("/pembelian/baru", data={"tanggal": "2026-10-20", "akun_id": "1", "barang_id": [str(b["id"])],
+                                         "qty": ["3"], "harga": ["1200000"]})
+    teks = client.get("/barang").get_data(as_text=True)
+    assert "Dispenser Baru" in teks and "Rp 3.600.000" in teks
+    assert "BRG-003 · Dispenser Baru" in client.get("/pembelian/baru").get_data(as_text=True)
+
+
+@pytest.mark.parametrize("data, pesan", [
+    ({"nama": ""}, "wajib diisi"),
+    ({"kode": "BRG-001", "nama": "Kembar"}, "sudah dipakai"),
+    ({"nama": "Minus", "harga_jual": "-5"}, "tidak boleh negatif"),
+])
+def test_barang_baru_cepat_menolak_isian_salah(client, data, pesan):
+    isi_data(client)
+    r = client.post("/barang/cepat", data=data)
+    assert r.status_code == 400
+    assert pesan in r.get_json()["galat"]
+    assert "Kembar" not in client.get("/barang").get_data(as_text=True)

@@ -150,6 +150,79 @@
     });
   });
 
+  // Barang baru dari pop-up (pembelian): simpan lewat fetch, lalu langsung pilih di baris.
+  var dlg = el('dlg-barang');
+  if (dlg) {
+    var formBarang = el('form-barang-baru');
+    var galatBarang = el('galat-barang-baru');
+    var tombolSimpan = formBarang.querySelector('button[type="submit"]');
+    var inputKode = formBarang.elements.kode;
+
+    function tampilGalat(teks) {
+      galatBarang.textContent = teks;
+      galatBarang.classList.toggle('tersembunyi', !teks);
+    }
+    function opsiBaru(b) {
+      var o = new Option(b.kode + ' · ' + b.nama, b.id);
+      o.dataset.harga = '';
+      o.dataset.stok = '0';
+      o.dataset.hpp = '0';
+      o.dataset.satuan = b.satuan;
+      return o;
+    }
+    function masukkanBarang(b) {
+      tbody.querySelectorAll('.sel-barang').forEach(function (s) { s.appendChild(opsiBaru(b)); });
+      tpl.content.querySelector('.sel-barang').appendChild(opsiBaru(b));
+      var row = baris().filter(function (r) { return !r.querySelector('.sel-barang').value; })[0];
+      if (!row) { tambahBaris(); row = baris()[baris().length - 1]; }
+      row.querySelector('.sel-barang').value = String(b.id);
+      pilihBarang(row, true);
+      hitung();
+      return row;
+    }
+
+    el('buka-barang-baru').addEventListener('click', function () {
+      tampilGalat('');
+      dlg.showModal();
+      formBarang.elements.nama.focus();
+    });
+    el('batal-barang-baru').addEventListener('click', function () { dlg.close(); });
+
+    formBarang.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!formBarang.elements.nama.value.trim()) {
+        tampilGalat('Nama barang wajib diisi.');
+        formBarang.elements.nama.focus();
+        return;
+      }
+      tombolSimpan.disabled = true;
+      tampilGalat('');
+      fetch(formBarang.dataset.url, { method: 'POST', body: new FormData(formBarang), credentials: 'same-origin' })
+        .then(function (r) {
+          var json = (r.headers.get('Content-Type') || '').indexOf('application/json') !== -1;
+          if (!json) throw { pesan: 'Sesi habis. Muat ulang halaman lalu masuk lagi.' };
+          return r.json().then(function (data) {
+            if (!r.ok) throw { pesan: data.galat || 'Barang gagal disimpan.' };
+            return data;
+          });
+        })
+        .then(function (b) {
+          var row = masukkanBarang(b);
+          formBarang.reset();
+          inputKode.value = b.kode_berikut;
+          dlg.close();
+          var info = el('info-barang-baru');
+          info.querySelector('span').textContent = 'Barang ' + b.kode + ' · ' + b.nama + ' ditambahkan dan sudah dipilih. Isi jumlah dan harga belinya.';
+          info.classList.remove('tersembunyi');
+          row.querySelector('.harga').focus();
+        })
+        .catch(function (err) {
+          tampilGalat((err && err.pesan) || 'Tidak terhubung ke server. Coba lagi.');
+        })
+        .then(function () { tombolSimpan.disabled = false; });
+    });
+  }
+
   baris().forEach(function (row) { pilihBarang(row, false); });
   aturMetode();
   aturCaraBayar();

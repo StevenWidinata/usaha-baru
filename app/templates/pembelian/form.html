@@ -10,10 +10,6 @@
   </div>
 </div>
 
-{% if not barang %}
-<div class="pesan pesan-info">{{ ikon('peringatan') }}Belum ada barang. <a href="{{ url_for('barang.baru') }}">Tambah barang dulu</a>.</div>
-{% endif %}
-
 <form method="post" id="form-transaksi" data-mode="beli" class="baris-kartu">
   <div class="lebar-2" style="display:flex;flex-direction:column;gap:16px;min-width:0">
     <section class="kartu">
@@ -32,7 +28,13 @@
 
     <section class="kartu kartu-tabel">
       <div class="kartu-kepala"><h2>Barang dibeli</h2>
-        <button class="btn btn-kecil" type="button" id="tambah-baris">{{ ikon('tambah', 16) }}Tambah baris</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-kecil" type="button" id="buka-barang-baru" aria-haspopup="dialog">{{ ikon('tambah', 16) }}Barang baru</button>
+          <button class="btn btn-kecil" type="button" id="tambah-baris">{{ ikon('tambah', 16) }}Tambah baris</button>
+        </div>
+      </div>
+      <div class="pad tersembunyi" id="info-barang-baru" role="status">
+        <div class="pesan pesan-sukses" style="font-size:13px">{{ ikon('cek', 16) }}<span></span></div>
       </div>
       <div class="gulir">
         <table class="tabel">
@@ -100,6 +102,38 @@
     <a class="btn" href="{{ url_for('pembelian.detail', pembelian_id=pembelian.id) if pembelian else url_for('pembelian.daftar') }}">Batal</a>
   </aside>
 </form>
+
+<dialog class="dialog" id="dlg-barang" aria-labelledby="judul-dlg-barang">
+  <form id="form-barang-baru" data-url="{{ url_for('barang.cepat') }}" novalidate>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <h2 id="judul-dlg-barang">Barang baru</h2>
+      <p class="muted kecil" style="margin:0">Setelah disimpan, barang ini langsung terpilih di pembelian. Stoknya bertambah dari pembelian ini.</p>
+    </div>
+    <div class="pesan pesan-galat tersembunyi" id="galat-barang-baru" role="alert" style="font-size:13px"></div>
+    <label class="isian">Nama barang
+      <input class="field" name="nama" required autocomplete="off" placeholder="Contoh: Dispenser Miyako WD-29PXC">
+    </label>
+    <div class="form-grid">
+      <label class="isian">Kode barang
+        <input class="field" name="kode" value="{{ kode_berikut }}" data-kode-berikut="{{ kode_berikut }}">
+      </label>
+      <label class="isian">Satuan
+        <input class="field" name="satuan" value="pcs" placeholder="pcs, unit, dus…">
+      </label>
+      <label class="isian">Harga jual (Rp)
+        <input class="field" name="harga_jual" inputmode="numeric" placeholder="0">
+      </label>
+      <label class="isian">Stok minimum
+        <input class="field" name="stok_minimum" inputmode="numeric" placeholder="0">
+      </label>
+    </div>
+    <p class="petunjuk" style="margin:0">Kode terisi otomatis. Harga beli diisi di baris pembelian.</p>
+    <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+      <button class="btn" type="button" id="batal-barang-baru">Batal</button>
+      <button class="btn btn-utama" type="submit">Simpan barang</button>
+    </div>
+  </form>
+</dialog>
 
 <template id="tpl-baris">{{ baris_item({'barang_id': None, 'qty': 1, 'harga': ''}, barang, 'beli') }}</template>
 {% endblock %}

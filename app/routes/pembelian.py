@@ -4,6 +4,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from .. import reports, services, util
 from ..db import get_db
 from ..inventory import StokTidakCukup, posisi_stok
+from . import barang as barang_routes
 from ._bantu import bulan_dari_request, daftar_akun, items_dari_form, tanggal_dari_form
 
 bp = Blueprint("pembelian", __name__, url_prefix="/pembelian")
@@ -72,6 +73,7 @@ def _konteks_form(conn, data, items, pembelian=None):
         "barang": barang,
         "akun": daftar_akun(conn),
         "pembelian": pembelian,
+        "kode_berikut": barang_routes._kode_berikut(conn),
     }
 
 
