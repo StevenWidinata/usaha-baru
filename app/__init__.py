@@ -44,6 +44,15 @@ def create_app(test_config=None):
             "hutang_telat": jumlah_hutang_telat(conn),
         }
 
+    @app.url_defaults
+    def versi_file_static(endpoint, values):
+        """Tambah ?v=<waktu ubah file> supaya browser langsung memakai CSS/JS terbaru setelah pembaruan."""
+        if endpoint == "static" and "filename" in values and "v" not in values:
+            try:
+                values["v"] = int(os.stat(os.path.join(app.static_folder, values["filename"])).st_mtime)
+            except OSError:
+                pass
+
     for bp in BLUEPRINTS:
         app.register_blueprint(bp)
 

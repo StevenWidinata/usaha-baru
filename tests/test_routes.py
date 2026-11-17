@@ -156,3 +156,9 @@ def test_barang_baru_cepat_menolak_isian_salah(client, data, pesan):
     assert r.status_code == 400
     assert pesan in r.get_json()["galat"]
     assert "Kembar" not in client.get("/barang").get_data(as_text=True)
+
+
+def test_file_static_diberi_versi_supaya_tidak_tertahan_cache(client):
+    teks = client.get("/pembelian/baru").get_data(as_text=True)
+    assert "/static/transaksi.js?v=" in teks and "/static/style.css?v=" in teks
+    assert client.get("/static/transaksi.js?v=123").status_code == 200
