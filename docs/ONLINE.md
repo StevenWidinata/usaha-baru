@@ -19,7 +19,7 @@ Di semua langkah, ganti `USERNAME` dengan username akun PythonAnywhere kamu.
 2. Copy-paste perintah ini, lalu tekan Enter:
 
 ```bash
-git clone https://github.com/stevenwidinata-sys/usaha-baru.git
+git clone https://github.com/StevenWidinata/usaha-baru.git
 cd usaha-baru
 python3.13 -m venv ~/.venv-usaha
 ~/.venv-usaha/bin/pip install -r requirements.txt
